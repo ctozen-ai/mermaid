@@ -1,0 +1,110 @@
+flowchart TD
+  user["👤 User"]
+
+  subgraph interface_layer["Interface Layer"]
+    chat_ui["Chat UI / Web App"]
+    api_gateway["API Gateway / REST Endpoint"]
+    cli["CLI / SDK"]
+  end
+
+  subgraph safety_input["Input Safety Layer"]
+    auth["Authentication &<br/>Rate Limiting"]
+    input_moderation["Content Moderation<br/>(PII detection, toxicity filters)"]
+    prompt_injection["Prompt Injection<br/>Detection"]
+  end
+
+  subgraph orchestration["Orchestration Layer"]
+    model_router["Model Router<br/>(select model by task,<br/>cost, latency)"]
+    load_balancer["Load Balancer /<br/>Fallback Routing"]
+  end
+
+  subgraph caching_layer["Caching Layer"]
+    prompt_cache["Prompt Cache<br/>(exact & semantic match)"]
+    kv_cache["KV Cache<br/>(attention key-value reuse)"]
+    response_cache["Response Cache<br/>(deterministic outputs)"]
+  end
+
+  subgraph context_layer["Context Management Layer"]
+    system_prompt["System Prompt /<br/>Instructions Injection"]
+    context_window["Context Window<br/>Management & Truncation"]
+    rag["RAG — Retrieval<br/>Augmented Generation"]
+    memory["Conversation Memory<br/>(short & long-term)"]
+  end
+
+  subgraph reasoning["Reasoning & Agentic Loop"]
+    cot["Chain-of-Thought /<br/>Extended Thinking"]
+    planning["Task Planning &<br/>Decomposition"]
+    self_reflection["Self-Reflection /<br/>Verification"]
+    tool_use["Tool Use Loop"]
+    subgraph tools["Available Tools"]
+      code_exec["Code Execution<br/>(sandbox)"]
+      web_search["Web Search /<br/>Browsing"]
+      function_call["Function Calling<br/>(external APIs)"]
+      file_ops["File I/O /<br/>Database Access"]
+    end
+  end
+
+  subgraph alignment["Alignment Layer"]
+    rlhf["RLHF / RLAIF<br/>(reward model)"]
+    constitutional["Constitutional AI<br/>(self-critique)"]
+    safety_training["Safety Training<br/>(harmlessness tuning)"]
+    instruction_tuning["Instruction Tuning<br/>(helpfulness)"]
+  end
+
+  subgraph model_core["Model Core"]
+    tokenizer["Tokenizer<br/>(text → tokens)"]
+    transformer["🧠 Transformer<br/>(attention + FFN layers)"]
+    sampling["Sampling Strategy<br/>(temperature, top-p, top-k)"]
+    detokenizer["Detokenizer<br/>(tokens → text)"]
+  end
+
+  subgraph safety_output["Output Safety Layer"]
+    output_filter["Output Content Filter<br/>(refusal, toxicity check)"]
+    watermark["AI Watermarking /<br/>Detection Metadata"]
+    format["Response Formatting<br/>& Structured Output"]
+  end
+
+  subgraph observability["Observability Layer"]
+    logging["Request Logging<br/>& Audit Trail"]
+    metrics["Latency, Token Usage<br/>& Cost Metrics"]
+    evals["Evaluation & Quality<br/>Monitoring"]
+  end
+
+  user --> interface_layer
+  interface_layer --> safety_input
+  safety_input --> orchestration
+  orchestration --> caching_layer
+  caching_layer -->|cache miss| context_layer
+  caching_layer -->|cache hit| safety_output
+  context_layer --> reasoning
+  tool_use --> tools
+  tools -->|results| self_reflection
+  cot --> planning
+  planning --> tool_use
+  self_reflection -->|needs revision| planning
+  self_reflection -->|satisfied| alignment
+  reasoning --> alignment
+  alignment --> model_core
+  tokenizer --> transformer
+  transformer --> sampling
+  sampling --> detokenizer
+  model_core --> safety_output
+  safety_output --> user
+
+  observability -.->|monitors all layers| interface_layer
+  observability -.-> orchestration
+  observability -.-> model_core
+
+  style user fill:#5b9bd5,stroke:#2c5f8a,color:#fff
+  style transformer fill:#e06666,stroke:#c0392b,color:#fff
+  style interface_layer fill:#d6e4f0,stroke:#4a86c8,color:#1a1a2e
+  style safety_input fill:#e2d1f0,stroke:#9b59b6,color:#1a1a2e
+  style orchestration fill:#cce5ff,stroke:#3498db,color:#1a1a2e
+  style caching_layer fill:#d4edda,stroke:#27ae60,color:#1a1a2e
+  style context_layer fill:#fce4cc,stroke:#e67e22,color:#1a1a2e
+  style reasoning fill:#f8d7da,stroke:#e74c3c,color:#1a1a2e
+  style tools fill:#f5c6cb,stroke:#c0392b,color:#1a1a2e
+  style alignment fill:#fff3cd,stroke:#f39c12,color:#1a1a2e
+  style model_core fill:#d5d8dc,stroke:#5d6d7e,color:#1a1a2e
+  style safety_output fill:#e2d1f0,stroke:#9b59b6,color:#1a1a2e
+  style observability fill:#dce6f0,stroke:#5d6d7e,color:#1a1a2e
