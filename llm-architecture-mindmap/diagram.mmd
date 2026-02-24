@@ -1,0 +1,76 @@
+mindmap
+  root((LLM Architecture Layers))
+    Interface Layer
+      Chat UI / Web App
+      API Gateway / REST Endpoint
+      CLI / SDK
+    Input Safety Layer
+      Authentication & Rate Limiting
+      Content Moderation
+        PII Detection
+        Toxicity Filters
+      Prompt Injection Detection
+    Orchestration Layer
+      Model Router
+        Select by Task
+        Select by Cost
+        Select by Latency
+      Load Balancer / Fallback Routing
+    Caching Layer
+      Prompt Cache
+        Exact Match
+        Semantic Match
+      KV Cache
+        Attention Key-Value Reuse
+      Response Cache
+        Deterministic Outputs
+    Context Management Layer
+      System Prompt / Instructions
+      Context Window Management
+        Truncation
+        Compression
+      RAG
+        Retrieval Augmented Generation
+      Conversation Memory
+        Short-Term
+        Long-Term
+    Reasoning & Agentic Loop
+      Chain-of-Thought / Extended Thinking
+      Task Planning & Decomposition
+      Self-Reflection / Verification
+      Tool Use Loop
+        Code Execution Sandbox
+        Web Search / Browsing
+        Function Calling / APIs
+        File I/O / Database Access
+    Alignment Layer
+      RLHF / RLAIF
+        Reward Model
+      Constitutional AI
+        Self-Critique
+      Safety Training
+        Harmlessness Tuning
+      Instruction Tuning
+        Helpfulness
+    Model Core
+      Tokenizer
+      Transformer
+        Attention Layers
+        Feed-Forward Networks
+      Sampling Strategy
+        Temperature
+        Top-p
+        Top-k
+      Detokenizer
+    Output Safety Layer
+      Content Filter
+        Refusal Logic
+        Toxicity Check
+      AI Watermarking
+      Response Formatting
+        Structured Output
+    Observability Layer
+      Request Logging & Audit Trail
+      Latency & Token Metrics
+      Cost Tracking
+      Evaluation & Quality Monitoring
