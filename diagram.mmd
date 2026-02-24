@@ -1,0 +1,110 @@
+sequenceDiagram
+    participant Dev as Developer
+    participant UI as CLI / VS Code / Web
+    participant Init as Session Init
+    participant Steer as Steering Queue (h2A)
+    participant "Loop" as Agent Loop (nO)
+    participant Plan as TODO Planner
+    participant Perm as Permission System
+    participant Hooks as Hooks Engine
+    participant Tools as Tool Layer
+    participant Sub as Subagents
+    participant MCP as MCP Servers
+    participant Ctx as Context Manager (wU2)
+    participant API as Anthropic API
+    participant Model as Claude
+
+    Note over Dev,Model: 🟢 SESSION INITIALIZATION
+
+    Dev->>UI: claude or claude "fix auth bug"
+    UI->>Init: Bootstrap session
+
+    Note over Init: Load order:<br/>1. System prompt [hardcoded]<br/>2. ~/.claude/settings.json [user]<br/>3. .claude/settings.json [project]<br/>4. CLAUDE.md [project root + parents]<br/>5. Git status snapshot<br/>6. Skills [lazy-loaded on demand]<br/>7. MCP server tool definitions<br/>8. Permission rules [deny > allow > ask]<br/>9. Hooks config<br/>10. Plugin/subagent definitions
+
+    Init-->>"Loop": Assembled context + tool defs
+
+    Note over Dev,Model: 🔄 MAIN INTERACTION CYCLE
+
+    Dev->>UI: Fix auth bug in login.ts and add tests
+    UI->>"Loop": User message
+
+    rect rgba(30, 45, 65, 0.3)
+        Note over "Loop",Model: MASTER AGENT LOOP (nO)<br/>while response has tool_use blocks: continue
+
+        "Loop"->>Ctx: Check context budget
+        Note over Ctx: Token accounting:<br/>- System prompt + CLAUDE.md<br/>- MCP tool definitions<br/>- Conversation history<br/>- File contents from tools<br/>If ~92% full: trigger compaction<br/>- Summarize older turns<br/>- Clear raw tool outputs<br/>- Preserve: TODO state,<br/>  file mods, key decisions<br/>- Save summary to CLAUDE.md<br/>Risk: summary-of-summary drift<br/>Mitigation: CLAUDE.md reloaded fresh
+
+        Ctx-->>"Loop": Context ready
+
+        "Loop"->>API: Full prompt + tool definitions
+        Note over API: API pipeline:<br/>- Auth + rate limiting<br/>- Input moderation<br/>- Extended thinking<br/>- Streaming inference<br/>- Output moderation
+
+        API->>Model: Inference request
+        Model-->>API: Response [text + tool_use blocks]
+        API-->>"Loop": Streamed response
+
+        Note over "Loop": Parse response:<br/>- text blocks -> stream to terminal<br/>- tool_use blocks -> execute each<br/>- no tool calls -> loop ends
+
+        "Loop"->>Plan: TodoWrite: create task plan
+        Note over Plan: Structured JSON task list:<br/>- Grep for auth patterns<br/>- Read login.ts<br/>- Identify and fix bug<br/>- Write login.test.ts<br/>- Run tests<br/>- Fix any failures<br/>- Run lint + typecheck<br/>TODO state re-injected as<br/>system message after each<br/>tool use to prevent goal drift
+
+        Plan-->>"Loop": Plan created
+
+        "Loop"->>Perm: Tool request: Grep
+        Perm->>Perm: Evaluate permission rules
+        Note over Perm: Evaluation order:<br/>1. Hooks [PreToolUse - can allow/deny]<br/>2. Deny rules [always win]<br/>3. Allow rules [auto-approve]<br/>4. Ask rules [prompt user]<br/>Settings hierarchy:<br/>- Enterprise [highest priority]<br/>- User ~/.claude/settings.json<br/>- Project .claude/settings.json<br/>Permission modes:<br/>- default: prompt for writes<br/>- auto-edit: auto-approve file ops<br/>- full-auto: approve everything<br/>- plan: read-only, no mutations
+
+        Perm-->>"Loop": Allowed
+
+        "Loop"->>Hooks: PreToolUse hook
+        Note over Hooks: 13 hook events:<br/>- SessionStart / SessionEnd<br/>- Setup [init/maintenance]<br/>- UserPromptSubmit<br/>- PreToolUse / PostToolUse<br/>- PostToolUseFailure<br/>- PermissionRequest<br/>- SubagentStart / SubagentStop<br/>- Notification [async]<br/>- Stop<br/>Exit codes control flow:<br/>0 = success, 2 = block tool
+
+        Hooks-->>"Loop": Hook passed [exit 0]
+
+        "Loop"->>Tools: Execute: Grep "authentication"
+        Note over Tools: Built-in tools:<br/>READ: Read, Glob, Grep, LS<br/>WRITE: Edit, MultiEdit, Write<br/>EXEC: Bash [persistent shell]<br/>NET: WebFetch, WebSearch<br/>PLAN: TodoRead, TodoWrite<br/>AGENTS: Task [subagent spawn]<br/>OTHER: NotebookRead/Edit,<br/>  BatchTool, AskUserQuestion<br/>Design: regex over embeddings,<br/>markdown over databases
+
+        Tools-->>"Loop": Grep results
+
+        "Loop"->>Hooks: PostToolUse hook
+        Note over Hooks: Post-execution actions:<br/>- Auto-format edited files<br/>- Run linter after code change<br/>- Log to external tracker<br/>- Validate output
+
+        Hooks-->>"Loop": Hook complete
+
+        "Loop"->>API: Tool results + updated context
+        API->>Model: Continue reasoning
+        Model-->>API: Next tool calls
+        API-->>"Loop": Streamed response
+
+        Note over "Loop": Loop continues:<br/>Read -> Edit -> Write test -><br/>Bash npm test -> fix failures -><br/>Bash npm run lint -> done
+
+    end
+
+    opt Subagent delegation
+        "Loop"->>Sub: Task: find all auth implementations
+        Note over Sub: Subagent types:<br/>- Task [general purpose]<br/>- Explore [codebase search]<br/>- Custom [user-defined .md files]<br/>Architecture:<br/>- Gets fresh context window<br/>- Isolated from parent conversation<br/>- Has access to same tools<br/>- Cannot spawn sub-subagents<br/>- Foreground [blocking] or<br/>  Background [concurrent]<br/>- Returns summary to parent<br/>- Defined in .claude/agents/<br/>  or ~/.claude/agents/
+
+        Sub-->>"Loop": Summary of findings
+    end
+
+    opt MCP integration
+        "Loop"->>MCP: Call MCP tool
+        Note over MCP: MCP servers add tools:<br/>- GitHub: PRs, issues, reviews<br/>- Jira: tickets, status<br/>- Slack: post updates<br/>- Google Drive: read docs<br/>- Custom servers<br/>Defined in settings.json<br/>Tool defs loaded at session start
+
+        MCP-->>"Loop": MCP result
+    end
+
+    opt Mid-task steering
+        Dev->>Steer: Actually, use Jest not Vitest
+        Note over Steer: h2A async dual-buffer queue:<br/>- Intercepts user input mid-loop<br/>- Injects into next API call<br/>- No restart needed<br/>- Model sees correction + adjusts<br/>- Also handles Escape and Ctrl+C
+
+        Steer->>"Loop": Inject steering message
+    end
+
+    "Loop"-->>UI: Final response + completed TODOs
+
+    Note over UI: Terminal output:<br/>- Streamed markdown<br/>- Colorized file diffs<br/>- Interactive TODO checklist<br/>- Git checkpoint created<br/>  [can undo all changes]
+
+    UI-->>Dev: Bug fixed, tests pass, lint clean
+
+    Note over Dev,Model: 📦 TECH STACK: TypeScript + React + Ink + Yoga + Bun | 90% self-written
