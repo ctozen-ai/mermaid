@@ -1,0 +1,23 @@
+flowchart TD
+  system["📜 System Prompt<br/><i>'You are a helpful assistant...'</i>"]
+  history["💬 Conversation History<br/><i>Previous messages</i>"]
+  tools["🔧 Tool Definitions<br/><i>Available capabilities</i>"]
+  rag["📚 Retrieved Context<br/><i>RAG / knowledge base</i>"]
+  user_msg["👤 Your Message<br/><i>'What's the weather in London?'</i>"]
+  window["📋 Context Window<br/><i>Everything the model sees</i>"]
+  model["🧠 To the Model"]
+
+  system --> window
+  history --> window
+  tools --> window
+  rag --> window
+  user_msg --> window
+  window --> model
+
+  style system fill:#e2d1f0,stroke:#9b59b6,color:#1a1a2e
+  style history fill:#d6e4f0,stroke:#4a86c8,color:#1a1a2e
+  style tools fill:#d4edda,stroke:#27ae60,color:#1a1a2e
+  style rag fill:#fce4cc,stroke:#e67e22,color:#1a1a2e
+  style user_msg fill:#5b9bd5,stroke:#2c5f8a,color:#fff
+  style window fill:#fff3cd,stroke:#f0c040,color:#1a1a2e
+  style model fill:#d5d8dc,stroke:#5d6d7e,color:#1a1a2e

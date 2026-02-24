@@ -1,0 +1,16 @@
+flowchart LR
+  you["👤 You"]
+  gateway["🚪 Gateway<br/><i>Auth & safety</i>"]
+  context["📋 Context<br/><i>Assembly</i>"]
+  thinking["🧠 Thinking<br/><i>Transformer</i>"]
+  safety["🛡️ Safety<br/><i>Output checks</i>"]
+  response["💬 Response"]
+
+  you --> gateway --> context --> thinking --> safety --> response
+
+  style you fill:#5b9bd5,stroke:#2c5f8a,color:#fff
+  style gateway fill:#e2d1f0,stroke:#9b59b6,color:#1a1a2e
+  style context fill:#fce4cc,stroke:#e67e22,color:#1a1a2e
+  style thinking fill:#fff3cd,stroke:#f0c040,color:#1a1a2e
+  style safety fill:#e2d1f0,stroke:#9b59b6,color:#1a1a2e
+  style response fill:#d4edda,stroke:#27ae60,color:#1a1a2e

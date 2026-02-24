@@ -1,0 +1,27 @@
+flowchart LR
+  you["👤 You<br/><i>§1</i>"]
+  safety_in["🚪 Input Safety<br/><i>§2</i>"]
+  routing["🔀 Routing<br/><i>§3</i>"]
+  context["📋 Context<br/><i>§4</i>"]
+  tokens["✂️ Tokenization<br/><i>§5</i>"]
+  transformer["🧠 Transformer<br/><i>§6</i>"]
+  reasoning["💭 Reasoning<br/><i>§7</i>"]
+  tools["🔧 Tools<br/><i>§8</i>"]
+  safety_out["🛡️ Output Safety<br/><i>§9</i>"]
+
+  you --> safety_in --> routing --> context --> tokens --> transformer
+  transformer --> reasoning
+  reasoning -->|"Tool needed"| tools
+  tools -->|"Result"| context
+  reasoning -->|"Answer ready"| safety_out
+  safety_out -->|"Response"| you
+
+  style you fill:#5b9bd5,stroke:#2c5f8a,color:#fff
+  style safety_in fill:#e2d1f0,stroke:#9b59b6,color:#1a1a2e
+  style routing fill:#cce5ff,stroke:#3498db,color:#1a1a2e
+  style context fill:#fce4cc,stroke:#e67e22,color:#1a1a2e
+  style tokens fill:#fff3cd,stroke:#f0c040,color:#1a1a2e
+  style transformer fill:#d5d8dc,stroke:#5d6d7e,color:#1a1a2e
+  style reasoning fill:#fff3cd,stroke:#f0c040,color:#1a1a2e
+  style tools fill:#d4edda,stroke:#27ae60,color:#1a1a2e
+  style safety_out fill:#e2d1f0,stroke:#9b59b6,color:#1a1a2e

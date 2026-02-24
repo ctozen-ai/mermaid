@@ -1,0 +1,9 @@
+stateDiagram-v2
+  [*] --> Reason: Start thinking
+  Reason --> SelfCheck: Generated reasoning step
+  SelfCheck --> Backtrack: Error detected
+  Backtrack --> Reason: Retry with correction
+  SelfCheck --> Confident: No errors found
+  Confident --> Deepen: Not sure enough
+  Deepen --> Reason: Think more carefully
+  Confident --> [*]: Ready to answer

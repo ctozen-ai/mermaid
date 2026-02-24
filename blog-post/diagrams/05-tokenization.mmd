@@ -1,0 +1,18 @@
+flowchart LR
+  text["📝 Text<br/><i>'Hello world'</i>"]
+  tokenizer["✂️ Tokenizer"]
+  tokens["🔢 Tokens<br/><i>[15496, 995]</i>"]
+  transformer["🧠 Transformer"]
+  out_tokens["🔢 Output Tokens<br/><i>[0, 314, 716, ...]</i>"]
+  detokenizer["🔗 Detokenizer"]
+  output["📝 Text<br/><i>'I can help...'</i>"]
+
+  text --> tokenizer --> tokens --> transformer --> out_tokens --> detokenizer --> output
+
+  style text fill:#5b9bd5,stroke:#2c5f8a,color:#fff
+  style tokenizer fill:#fce4cc,stroke:#e67e22,color:#1a1a2e
+  style tokens fill:#fff3cd,stroke:#f0c040,color:#1a1a2e
+  style transformer fill:#d5d8dc,stroke:#5d6d7e,color:#1a1a2e
+  style out_tokens fill:#fff3cd,stroke:#f0c040,color:#1a1a2e
+  style detokenizer fill:#fce4cc,stroke:#e67e22,color:#1a1a2e
+  style output fill:#d4edda,stroke:#27ae60,color:#1a1a2e

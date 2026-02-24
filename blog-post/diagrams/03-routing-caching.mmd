@@ -1,0 +1,24 @@
+flowchart TD
+  request["📨 Validated Request"]
+  cache{"🗄️ Cache hit?"}
+  cached_response["⚡ Cached Response"]
+  router["🔀 Model Router"]
+  small["🐇 Small Model<br/><i>Simple tasks</i>"]
+  large["🐘 Large Model<br/><i>Complex tasks</i>"]
+  process["⚙️ Process Request"]
+
+  request --> cache
+  cache -->|"Hit — skip inference"| cached_response
+  cache -->|Miss| router
+  router -->|"Simple query"| small
+  router -->|"Complex reasoning"| large
+  small --> process
+  large --> process
+
+  style request fill:#5b9bd5,stroke:#2c5f8a,color:#fff
+  style cache fill:#fff,stroke:#27ae60,color:#1a1a2e
+  style cached_response fill:#d4edda,stroke:#27ae60,color:#1a1a2e
+  style router fill:#cce5ff,stroke:#3498db,color:#1a1a2e
+  style small fill:#fff3cd,stroke:#f0c040,color:#1a1a2e
+  style large fill:#fce4cc,stroke:#e67e22,color:#1a1a2e
+  style process fill:#d6e4f0,stroke:#4a86c8,color:#1a1a2e

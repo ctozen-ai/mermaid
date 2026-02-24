@@ -1,0 +1,23 @@
+flowchart TD
+  input["🔢 Input Tokens"]
+  attention["👁️ Attention<br/><i>Which tokens matter<br/>for this position?</i>"]
+  ffn["⚡ Feed-Forward Network<br/><i>Transform the<br/>representation</i>"]
+  sampling["🎲 Sampling<br/><i>Pick the next token<br/>from probabilities</i>"]
+  new_token["📝 New Token Generated"]
+  done{"Done?"}
+
+  input --> attention
+  attention --> ffn
+  ffn --> sampling
+  sampling --> new_token
+  new_token --> done
+  done -->|"No — feed back in"| attention
+  done -->|"Yes — stop token<br/>or max length"| output["✅ Complete Output"]
+
+  style input fill:#5b9bd5,stroke:#2c5f8a,color:#fff
+  style attention fill:#fce4cc,stroke:#e67e22,color:#1a1a2e
+  style ffn fill:#fff3cd,stroke:#f0c040,color:#1a1a2e
+  style sampling fill:#e2d1f0,stroke:#9b59b6,color:#1a1a2e
+  style new_token fill:#d4edda,stroke:#27ae60,color:#1a1a2e
+  style done fill:#fff,stroke:#888,color:#1a1a2e
+  style output fill:#d4edda,stroke:#27ae60,color:#1a1a2e

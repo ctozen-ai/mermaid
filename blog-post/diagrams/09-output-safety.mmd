@@ -1,0 +1,14 @@
+flowchart LR
+  raw["📝 Raw Output"]
+  filter["🔍 Content Filter<br/><i>Toxicity & refusal check</i>"]
+  format["📐 Formatter<br/><i>Markdown, JSON, etc.</i>"]
+  watermark["🏷️ Watermark<br/><i>AI detection metadata</i>"]
+  deliver["📤 Delivered<br/>to You"]
+
+  raw --> filter --> format --> watermark --> deliver
+
+  style raw fill:#d5d8dc,stroke:#5d6d7e,color:#1a1a2e
+  style filter fill:#e2d1f0,stroke:#9b59b6,color:#1a1a2e
+  style format fill:#fce4cc,stroke:#e67e22,color:#1a1a2e
+  style watermark fill:#cce5ff,stroke:#3498db,color:#1a1a2e
+  style deliver fill:#d4edda,stroke:#27ae60,color:#1a1a2e

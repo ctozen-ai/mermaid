@@ -1,0 +1,21 @@
+flowchart TD
+  think["🧠 Think<br/><i>Analyze what's needed</i>"]
+  decide{"Need a tool?"}
+  execute["⚡ Execute Tool<br/><i>Search, code, API call...</i>"]
+  observe["👁️ Observe Result<br/><i>Parse the output</i>"]
+  inject["📥 Inject into Context<br/><i>Add result to conversation</i>"]
+  answer["💬 Final Answer"]
+
+  think --> decide
+  decide -->|"Yes"| execute
+  execute --> observe
+  observe --> inject
+  inject -->|"Re-enter thinking"| think
+  decide -->|"No — ready to answer"| answer
+
+  style think fill:#fff3cd,stroke:#f0c040,color:#1a1a2e
+  style decide fill:#fff,stroke:#888,color:#1a1a2e
+  style execute fill:#d4edda,stroke:#27ae60,color:#1a1a2e
+  style observe fill:#cce5ff,stroke:#3498db,color:#1a1a2e
+  style inject fill:#fce4cc,stroke:#e67e22,color:#1a1a2e
+  style answer fill:#5b9bd5,stroke:#2c5f8a,color:#fff

@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>What Actually Happens When You Talk to an LLM</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 490 490'><path d='M490.16,84.61C490.16,37.912 452.248,0 405.55,0L84.61,0C37.912,0 0,37.912 0,84.61L0,405.55C0,452.248 37.912,490.16 84.61,490.16L405.55,490.16C452.248,490.16 490.16,452.248 490.16,405.55L490.16,84.61Z' fill='%23ff3670'/><path d='M407.48,111.18C335.587,108.103 269.573,152.338 245.08,220C220.587,152.338 154.573,108.103 82.68,111.18C80.285,168.229 107.577,222.632 154.74,254.82C178.908,271.419 193.35,298.951 193.27,328.27L193.27,379.13L296.9,379.13L296.9,328.27C296.816,298.953 311.255,271.42 335.42,254.82C382.596,222.644 409.892,168.233 407.48,111.18Z' fill='white'/></svg>">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    background: #f0f2f5;
+    color: #1a1a2e;
+    line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .article {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 48px 24px 96px;
+  }
+
+  h1 {
+    font-size: 2.2rem;
+    font-weight: 700;
+    line-height: 1.2;
+    margin-bottom: 24px;
+    color: #1a1a2e;
+  }
+
+  .lead {
+    font-size: 1.15rem;
+    color: #444;
+    margin-bottom: 32px;
+  }
+
+  h2 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-top: 48px;
+    margin-bottom: 16px;
+    color: #1a1a2e;
+  }
+
+  p {
+    margin-bottom: 16px;
+    font-size: 1.05rem;
+  }
+
+  strong {
+    font-weight: 600;
+    color: #1a1a2e;
+  }
+
+  .diagram {
+    margin: 32px 0;
+    text-align: center;
+    background: #fff;
+    border-radius: 12px;
+    padding: 24px 16px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    overflow-x: auto;
+  }
+
+  .diagram img {
+    max-width: 100%;
+    height: auto;
+  }
+
+  hr {
+    border: none;
+    border-top: 1px solid #ddd;
+    margin: 48px 0;
+  }
+
+  .takeaway {
+    background: #fff;
+    border-left: 4px solid #5b9bd5;
+    border-radius: 0 8px 8px 0;
+    padding: 20px 24px;
+    margin: 24px 0;
+  }
+
+  .takeaway p {
+    margin-bottom: 12px;
+  }
+
+  .takeaway p:last-child {
+    margin-bottom: 0;
+  }
+
+  .section-number {
+    display: inline-block;
+    background: #5b9bd5;
+    color: #fff;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    text-align: center;
+    line-height: 28px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-right: 8px;
+    vertical-align: middle;
+  }
+
+  .toc {
+    background: #fff;
+    border-radius: 12px;
+    padding: 24px 32px;
+    margin: 32px 0;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  }
+
+  .toc h3 {
+    font-size: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #888;
+    margin-bottom: 12px;
+  }
+
+  .toc ol {
+    padding-left: 24px;
+  }
+
+  .toc li {
+    margin-bottom: 6px;
+    font-size: 0.95rem;
+  }
+
+  .toc a {
+    color: #5b9bd5;
+    text-decoration: none;
+  }
+
+  .toc a:hover {
+    text-decoration: underline;
+  }
+
+  @media (max-width: 600px) {
+    h1 { font-size: 1.6rem; }
+    h2 { font-size: 1.25rem; }
+    .article { padding: 24px 16px 64px; }
+    .diagram { padding: 16px 8px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="article">
+
+<h1>What Actually Happens When You Talk to an LLM</h1>
+
+<p class="lead">You type a prompt, hit Enter, and a few seconds later words start streaming back. But what happens in between? The answer involves more machinery than most people realize &mdash; authentication gates, context assembly, tokenization, a transformer doing next-token prediction in a loop, safety filters, and sometimes an entire agentic cycle where the model uses tools and feeds results back into itself.</p>
+
+<p>This post walks through the full journey of a prompt, from keystroke to response, in ten steps. Each section has a small diagram you can use as a mental anchor. By the end, you'll have a clear map of the entire pipeline &mdash; not just the &ldquo;AI magic&rdquo; part, but all the infrastructure around it.</p>
+
+<div class="diagram" id="diagram-overview"></div>
+
+<p>The diagram above is your roadmap. Your message passes through a gateway, gets assembled into context, enters the thinking engine, passes through safety checks, and arrives back as a response. Let&rsquo;s zoom into each stage.</p>
+
+<nav class="toc">
+  <h3>Contents</h3>
+  <ol>
+    <li><a href="#s1">The Bouncer at the Door</a> &mdash; input safety</li>
+    <li><a href="#s2">Picking the Right Brain</a> &mdash; routing &amp; caching</li>
+    <li><a href="#s3">Setting the Stage</a> &mdash; context assembly</li>
+    <li><a href="#s4">Tokens, Not Words</a> &mdash; tokenization</li>
+    <li><a href="#s5">The Heart of the Machine</a> &mdash; the transformer loop</li>
+    <li><a href="#s6">Thinking Out Loud</a> &mdash; reasoning</li>
+    <li><a href="#s7">Hands and Eyes</a> &mdash; tool use</li>
+    <li><a href="#s8">The Guardrails</a> &mdash; output safety</li>
+    <li><a href="#s9">The Full Picture</a> &mdash; recap</li>
+    <li><a href="#s10">What to Take Away</a></li>
+  </ol>
+</nav>
+
+<hr>
+
+<h2 id="s1"><span class="section-number">1</span> The Bouncer at the Door</h2>
+
+<p>Before your prompt gets anywhere near a neural network, it has to pass through a gauntlet of checks. Think of this as the bouncer at a nightclub &mdash; you need the right credentials, you can't show up too often, and you'd better not be causing trouble.</p>
+
+<div class="diagram" id="diagram-input-safety"></div>
+
+<p><strong>Authentication</strong> comes first. Are you who you say you are? API keys, OAuth tokens, or session cookies get validated. If you're using ChatGPT through the web, your browser session handles this invisibly. If you're hitting the API directly, your key gets checked against a database.</p>
+
+<p><strong>Rate limiting</strong> is next. Even authenticated users can't send unlimited requests. This protects the service from abuse and ensures fair access. If you've ever gotten a &ldquo;too many requests&rdquo; error, you've hit this wall.</p>
+
+<p><strong>Content moderation</strong> scans your input for things the service doesn't want to process &mdash; personally identifiable information that shouldn't be forwarded, content that violates terms of service, or other policy violations. This is a fast classifier, not the main model.</p>
+
+<p><strong>Prompt injection detection</strong> is the newest gate. This checks whether your input is trying to trick the model into ignoring its instructions. For example, if your message contains &ldquo;ignore all previous instructions and&hellip;&rdquo;, a dedicated detector might flag it before the main model ever sees it.</p>
+
+<p>If your request passes all four checks, it moves on. If any check fails, you get an error response &mdash; and the main model never sees your prompt at all.</p>
+
+<hr>
+
+<h2 id="s2"><span class="section-number">2</span> Picking the Right Brain</h2>
+
+<p>Not every question needs the same model. Asking &ldquo;what's 2+2?&rdquo; doesn't require the same computational firepower as &ldquo;write me a recursive algorithm to solve the traveling salesman problem.&rdquo; Modern LLM services use routing to match requests to the right model.</p>
+
+<div class="diagram" id="diagram-routing-caching"></div>
+
+<p>The first thing the router checks is the <strong>cache</strong>. If someone recently asked the exact same question (or something semantically close enough), the system can return the cached response instantly. This is a huge win for latency and cost &mdash; the model doesn't need to run at all.</p>
+
+<p>For cache misses, a <strong>model router</strong> classifies the request by complexity. Simple queries &mdash; factual lookups, basic formatting, short translations &mdash; get routed to smaller, faster models. Complex queries &mdash; multi-step reasoning, creative writing, code generation &mdash; go to larger, more capable (and more expensive) models.</p>
+
+<p>This routing happens in milliseconds and is invisible to you. When you use services like Claude or ChatGPT, you might be explicitly choosing a model, but behind the scenes there's still routing logic deciding how to handle your request efficiently.</p>
+
+<hr>
+
+<h2 id="s3"><span class="section-number">3</span> Setting the Stage</h2>
+
+<p>Here's something that surprises most people: <strong>your message is a minority of what the model actually sees</strong>. By the time the model processes your request, your prompt has been combined with a lot of other text into a single &ldquo;context window.&rdquo;</p>
+
+<div class="diagram" id="diagram-context-assembly"></div>
+
+<p>The <strong>system prompt</strong> comes first. This is the instruction set that tells the model how to behave &mdash; its personality, capabilities, restrictions, and formatting preferences. When you talk to ChatGPT, Claude, or any other assistant, there's a system prompt you never see that shapes every response. It can be hundreds or thousands of words long.</p>
+
+<p><strong>Conversation history</strong> follows. If you've been chatting back and forth, all the previous messages (yours and the model's) get included so the model has context. This is why the model &ldquo;remembers&rdquo; what you said earlier in a conversation &mdash; it's literally re-reading the entire conversation every time.</p>
+
+<p><strong>Tool definitions</strong> tell the model what it can do besides generate text. Can it search the web? Run code? Call APIs? These definitions are described in structured text that the model reads and understands.</p>
+
+<p><strong>Retrieved context</strong> from RAG (Retrieval-Augmented Generation) adds relevant documents or data that were fetched specifically for your query. If you ask about a company's return policy, a RAG system might fetch the actual policy document and inject it into the context.</p>
+
+<p>Finally, <strong>your message</strong> goes in at the end. In a typical conversation turn, your actual question might be 20 words out of a context window containing 5,000+ words. The model processes all of it together &mdash; it doesn't distinguish between &ldquo;system instructions&rdquo; and &ldquo;user message&rdquo; at the neural network level. It's all just tokens.</p>
+
+<hr>
+
+<h2 id="s4"><span class="section-number">4</span> Tokens, Not Words</h2>
+
+<p>Here's another thing that surprises people: LLMs don't read words. They read <strong>tokens</strong> &mdash; numeric chunks that roughly correspond to word pieces. The word &ldquo;understanding&rdquo; might be two tokens (&ldquo;under&rdquo; + &ldquo;standing&rdquo;), while common words like &ldquo;the&rdquo; are single tokens. Even spaces and punctuation are tokens.</p>
+
+<div class="diagram" id="diagram-tokenization"></div>
+
+<p>The <strong>tokenizer</strong> converts your assembled context (system prompt + history + tools + RAG + your message) into a sequence of numbers. Each number maps to an entry in a fixed vocabulary &mdash; typically 50,000 to 100,000 entries. The text &ldquo;Hello world&rdquo; might become <code>[15496, 995]</code>.</p>
+
+<p>These numbers are what the transformer actually processes. It doesn't see letters or words &mdash; it sees a sequence of integers, each representing a chunk of text.</p>
+
+<p>On the output side, the transformer produces new token IDs one at a time. The <strong>detokenizer</strong> converts each number back into text characters and streams them to you. This is why you sometimes see words appear in chunks rather than letter by letter &mdash; each chunk is one token being decoded.</p>
+
+<p>A practical consequence: models are billed by tokens, not by words. A 1,000-word prompt might be 1,300 tokens, depending on the vocabulary. Different tokenizers produce different token counts for the same text, which is why token limits vary between models.</p>
+
+<hr>
+
+<h2 id="s5"><span class="section-number">5</span> The Heart of the Machine</h2>
+
+<p>This is the part most people think of when they hear &ldquo;AI&rdquo; &mdash; the transformer neural network. But the core mechanism is simpler to describe than you might expect: <strong>everything is next-token prediction</strong>.</p>
+
+<div class="diagram" id="diagram-transformer-loop"></div>
+
+<p>The transformer takes a sequence of tokens and predicts what token comes next. That's it. The entire magic of language models &mdash; writing poetry, solving math, generating code &mdash; emerges from this one operation repeated thousands of times.</p>
+
+<p>Here's how one step works:</p>
+
+<p><strong>Attention</strong> is the transformer's core innovation. For each position in the sequence, the model calculates which other tokens are most relevant. When generating a response to &ldquo;What's the capital of France?&rdquo;, the attention mechanism learns that &ldquo;capital&rdquo; and &ldquo;France&rdquo; are the most important tokens for predicting the next word. This happens across many &ldquo;heads&rdquo; in parallel, each head learning to focus on different relationships.</p>
+
+<p>The <strong>feed-forward network</strong> takes the attention output and transforms it through learned mathematical functions. This is where the model's &ldquo;knowledge&rdquo; lives &mdash; facts, patterns, and reasoning abilities encoded in billions of numeric weights.</p>
+
+<p><strong>Sampling</strong> takes the transformer's output (a probability distribution over all possible next tokens) and picks one. With low temperature, the model picks the most likely token (deterministic, predictable). With high temperature, it samples more randomly (creative, varied). The &ldquo;top-p&rdquo; and &ldquo;top-k&rdquo; settings further control how many candidates the model considers.</p>
+
+<p>The new token gets appended to the sequence, and the whole process repeats. Generate the next token. And the next. And the next. Until the model produces a stop token or hits the maximum length.</p>
+
+<p>This is why streaming works &mdash; each token can be sent to you the moment it's generated, because the model doesn't know what the whole response will be. It's writing one token at a time, just like you might write one word at a time.</p>
+
+<hr>
+
+<h2 id="s6"><span class="section-number">6</span> Thinking Out Loud</h2>
+
+<p>Modern LLMs don't just blast out answers. The best ones reason through problems step by step, and they can catch and correct their own mistakes mid-thought. This is &ldquo;extended thinking&rdquo; or &ldquo;chain-of-thought reasoning.&rdquo;</p>
+
+<div class="diagram" id="diagram-reasoning"></div>
+
+<p>The model generates hidden &ldquo;thinking tokens&rdquo; &mdash; scratchpad text that you don't see in the final response but that guides the model's reasoning. Here's what happens in that hidden scratchpad:</p>
+
+<p>The model <strong>reasons step by step</strong>, writing out its logic in natural language. &ldquo;The user is asking about X. I know that X relates to Y because Z. Let me work through this&hellip;&rdquo;</p>
+
+<p>At each step, it <strong>self-checks</strong>. The model literally writes things like &ldquo;Wait, that's not right&rdquo; or &ldquo;Let me reconsider&rdquo; in its token stream. This isn't a separate module &mdash; it's the same next-token prediction, but the model has been trained to be self-critical.</p>
+
+<p>If it detects an error, it <strong>backtracks</strong>. &ldquo;Actually, I made a mistake in step 2. The correct approach is&hellip;&rdquo; The model revises its reasoning by writing the correction into the token stream, which then constrains all subsequent tokens.</p>
+
+<p>There's also a <strong>confidence gate</strong>. If the model isn't sure enough about its answer, it deepens its analysis: &ldquo;Let me think about this more carefully&hellip;&rdquo; or &ldquo;Let me consider an alternative approach&hellip;&rdquo; This loop can repeat several times for hard problems.</p>
+
+<p>The key insight: the model isn't running separate &ldquo;thinking&rdquo; and &ldquo;answering&rdquo; programs. It's all next-token prediction. The thinking tokens simply steer the probability distribution for the answer tokens that follow. Writing &ldquo;Wait, that's wrong&rdquo; literally changes what the model predicts next.</p>
+
+<hr>
+
+<h2 id="s7"><span class="section-number">7</span> Hands and Eyes</h2>
+
+<p>Plain text generation is powerful, but it has limits. The model can't check today's weather by reasoning about it &mdash; it needs to actually look it up. This is where tool use turns an LLM from a text generator into an agent.</p>
+
+<div class="diagram" id="diagram-tool-use"></div>
+
+<p>The agentic loop works like this:</p>
+
+<p>The model <strong>thinks</strong> about what it needs to do. Given the user's request, what information does it need? Can it answer directly, or does it need to take an action first?</p>
+
+<p>If it <strong>decides</strong> it needs a tool, it generates a structured tool call &mdash; something like <code>{"tool": "web_search", "query": "London weather today"}</code>. The system intercepts this, executes the tool, and returns the result.</p>
+
+<p>The model <strong>observes</strong> the result and <strong>injects</strong> it back into the context window. Now the model has new information it didn't have before. It re-enters the thinking phase with this new data.</p>
+
+<p>This loop can repeat multiple times. A complex task like &ldquo;find the cheapest flight from London to New York next Tuesday and summarize the options&rdquo; might involve several search calls, a comparison step, and a formatting step &mdash; each one cycling through think &rarr; execute &rarr; observe &rarr; inject.</p>
+
+<p>The critical insight: <strong>the loop arrow is why LLMs can do multi-step tasks.</strong> Without it, the model could only use information from its training data and the current context. With the loop, it can gather new information, take actions, and iterate &mdash; turning a single prompt into a sequence of steps that accomplish complex goals.</p>
+
+<p>This is also why agentic tasks take longer. Each loop iteration requires a full inference pass through the model, plus the time to execute the tool. A response that involves three tool calls might take 10&ndash;15 seconds instead of 2&ndash;3 seconds for a direct answer.</p>
+
+<hr>
+
+<h2 id="s8"><span class="section-number">8</span> The Guardrails</h2>
+
+<p>The model has generated its response &mdash; but it doesn't go directly to you. Just as input was checked on the way in, output gets checked on the way out.</p>
+
+<div class="diagram" id="diagram-output-safety"></div>
+
+<p>The <strong>content filter</strong> scans the model's output for problems. Did the model generate something toxic despite its training? Did it leak sensitive information from its context? Did it produce content that violates policy? A fast classifier checks for these issues and can redact or block the response.</p>
+
+<p>The <strong>formatter</strong> structures the output according to what was requested. If you asked for JSON, it validates the JSON structure. If the response is markdown, it ensures proper formatting. Some APIs offer &ldquo;structured output&rdquo; modes that guarantee the response matches a specific schema.</p>
+
+<p><strong>Watermarking</strong> embeds invisible signals in the text that identify it as AI-generated. This might be subtle statistical patterns in word choice that don't affect readability but can be detected by specialized tools. Not all providers do this, and the techniques vary.</p>
+
+<p>Finally, the response is <strong>delivered</strong> to you &mdash; streamed token by token through the same API gateway that received your request.</p>
+
+<p>This output safety layer mirrors the input safety layer from the beginning of the pipeline. Together, they form a sandwich around the model: check the input, let the model think, check the output.</p>
+
+<hr>
+
+<h2 id="s9"><span class="section-number">9</span> The Full Picture</h2>
+
+<p>Let's pull it all together. Here's the complete journey of a prompt, with section numbers so you can revisit any stage.</p>
+
+<div class="diagram" id="diagram-full-picture"></div>
+
+<ol style="margin: 16px 0 16px 24px; font-size: 1.05rem;">
+  <li><strong>You</strong> send a prompt</li>
+  <li><strong>Input safety</strong> authenticates you and checks your content</li>
+  <li><strong>Routing</strong> checks the cache and selects the right model</li>
+  <li><strong>Context assembly</strong> combines your message with system prompts, history, tools, and retrieved documents</li>
+  <li><strong>Tokenization</strong> converts everything to numbers the model can process</li>
+  <li><strong>The transformer</strong> predicts tokens one at a time using attention and learned weights</li>
+  <li><strong>Reasoning</strong> lets the model think step by step, catching and correcting its own mistakes</li>
+  <li><strong>Tool use</strong> lets the model gather information and take actions, cycling back through context assembly</li>
+  <li><strong>Output safety</strong> filters, formats, and delivers the response back to you</li>
+</ol>
+
+<p>The whole thing takes 1&ndash;30 seconds depending on complexity, model size, and whether tools are involved. Simple queries hit the cache or get handled by a small model in under a second. Complex agentic tasks with multiple tool calls can take much longer.</p>
+
+<hr>
+
+<h2 id="s10"><span class="section-number">10</span> What to Take Away</h2>
+
+<div class="takeaway">
+  <p><strong>Your message is a small part of the picture.</strong> The system prompt, conversation history, tool definitions, and retrieved context often dwarf your actual input. Understanding this helps you write better prompts &mdash; you're adding to an existing conversation, not starting from scratch.</p>
+
+  <p><strong>Everything is next-token prediction.</strong> The transformer doesn't &ldquo;understand&rdquo; your question in a human sense. It predicts the most likely next token, over and over. But this simple mechanism, scaled up with billions of parameters and trained on vast amounts of text, produces behavior that looks remarkably like understanding.</p>
+
+  <p><strong>The model is surrounded by infrastructure.</strong> Authentication, moderation, routing, caching, safety filters &mdash; the neural network is only one component in a much larger system. When an LLM service goes down or behaves unexpectedly, the issue is often in this surrounding infrastructure, not in the model itself.</p>
+
+  <p><strong>Tool use is what makes LLMs agents.</strong> Without the agentic loop, a language model is a very sophisticated autocomplete. With it, the model can gather information, take actions, and solve multi-step problems. The loop arrow in the diagram is the most important arrow in the entire pipeline.</p>
+</div>
+
+<p>Now, the next time you hit Enter on a prompt, you'll know exactly what machinery springs into action.</p>
+
+</div>
+
+<script>
+// Load SVG diagrams inline for best rendering
+const diagrams = [
+  { id: 'diagram-overview', file: 'diagrams/01-overview.svg' },
+  { id: 'diagram-input-safety', file: 'diagrams/02-input-safety.svg' },
+  { id: 'diagram-routing-caching', file: 'diagrams/03-routing-caching.svg' },
+  { id: 'diagram-context-assembly', file: 'diagrams/04-context-assembly.svg' },
+  { id: 'diagram-tokenization', file: 'diagrams/05-tokenization.svg' },
+  { id: 'diagram-transformer-loop', file: 'diagrams/06-transformer-loop.svg' },
+  { id: 'diagram-reasoning', file: 'diagrams/07-reasoning.svg' },
+  { id: 'diagram-tool-use', file: 'diagrams/08-tool-use.svg' },
+  { id: 'diagram-output-safety', file: 'diagrams/09-output-safety.svg' },
+  { id: 'diagram-full-picture', file: 'diagrams/10-full-picture.svg' },
+];
+
+diagrams.forEach(({ id, file }) => {
+  fetch(file)
+    .then(r => r.text())
+    .then(svg => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.innerHTML = svg;
+        // Make SVG responsive
+        const svgEl = el.querySelector('svg');
+        if (svgEl) {
+          svgEl.removeAttribute('height');
+          svgEl.style.maxWidth = '100%';
+          svgEl.style.height = 'auto';
+        }
+      }
+    })
+    .catch(() => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.innerHTML = `<img src="${file}" alt="Diagram" style="max-width:100%;height:auto;">`;
+      }
+    });
+});
+</script>
+
+</body>
+</html>

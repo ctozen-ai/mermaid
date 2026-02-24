@@ -1,0 +1,26 @@
+flowchart TD
+  request["📨 Your Request"]
+  auth{"🔑 Authenticated?"}
+  rate{"⏱️ Within<br/>rate limit?"}
+  moderation{"🔍 Content<br/>appropriate?"}
+  injection{"🛡️ Prompt injection<br/>detected?"}
+  proceed["✅ Proceed to<br/>Model"]
+  reject["❌ Rejected"]
+
+  request --> auth
+  auth -->|Yes| rate
+  auth -->|No| reject
+  rate -->|Yes| moderation
+  rate -->|No| reject
+  moderation -->|Yes| injection
+  moderation -->|No| reject
+  injection -->|No| proceed
+  injection -->|Yes| reject
+
+  style request fill:#5b9bd5,stroke:#2c5f8a,color:#fff
+  style auth fill:#fff,stroke:#9b59b6,color:#1a1a2e
+  style rate fill:#fff,stroke:#9b59b6,color:#1a1a2e
+  style moderation fill:#fff,stroke:#9b59b6,color:#1a1a2e
+  style injection fill:#fff,stroke:#9b59b6,color:#1a1a2e
+  style proceed fill:#d4edda,stroke:#27ae60,color:#1a1a2e
+  style reject fill:#f8d7da,stroke:#e74c3c,color:#1a1a2e
