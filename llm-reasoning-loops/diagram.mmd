@@ -1,0 +1,95 @@
+flowchart TD
+  prompt(["👤 User Prompt"])
+
+  subgraph context["Context Window Assembly"]
+    sys_prompt["System Prompt &<br/>Instructions"]
+    history["Conversation<br/>History"]
+    tool_defs["Available Tool<br/>Definitions"]
+    retrieved["Retrieved Context<br/>(RAG / Memory)"]
+  end
+
+  subgraph agentic_loop["Agentic Loop — can run N iterations bringing in new information each time"]
+    direction TB
+
+    subgraph thinking["Extended Thinking Phase — hidden scratchpad tokens"]
+      direction TB
+
+      understand["🔍 Understand Problem<br/><i>Parse intent, identify constraints,<br/>note ambiguities</i>"]
+      retrieve_knowledge["📚 Activate Knowledge<br/><i>Surface relevant training data,<br/>patterns, and facts</i>"]
+      strategize["🧭 Select Strategy<br/><i>Direct answer? Step-by-step?<br/>Decompose into subtasks?</i>"]
+
+      subgraph reasoning_loop["Reasoning Loop — the core thinking engine"]
+        direction TB
+        reason["⛓️ Reason Step by Step<br/><i>Generate chain-of-thought tokens,<br/>each token constraining the next</i>"]
+        self_check{"🔎 Self-Check<br/>Error or inconsistency<br/>detected?"}
+        backtrack["↩️ Backtrack & Revise<br/><i>'Wait, that's not right because...'<br/>Written in the token stream</i>"]
+        confident{"📊 Confidence Gate<br/>Sufficient certainty<br/>to commit?"}
+        deepen["🔬 Deepen Analysis<br/><i>'Let me think about this<br/>more carefully...'</i>"]
+      end
+
+      formulate["✍️ Formulate Output<br/><i>Structure the response or<br/>compose a tool call</i>"]
+    end
+
+    output_decision{"Output Type?"}
+
+    subgraph tool_execution["Tool Execution — breaks out of pure reasoning"]
+      direction TB
+      execute_tool["⚡ Execute Tool<br/><i>Code, search, API call,<br/>file read, etc.</i>"]
+      observe["👁️ Observe Result<br/><i>Parse output, check for errors,<br/>extract relevant data</i>"]
+      inject["📥 Inject into Context<br/><i>Tool result becomes new tokens<br/>in the context window</i>"]
+    end
+
+    final_answer["📝 Final Answer<br/>Ready for Output"]
+  end
+
+  subgraph output_phase["Output Phase"]
+    safety_filter["🛡️ Safety Filter<br/>& Content Check"]
+    format_response["📤 Format & Stream<br/>Response to User"]
+  end
+
+  response(["👤 User Receives Response"])
+
+  %% Main flow
+  prompt --> context
+  context --> understand
+  understand --> retrieve_knowledge
+  retrieve_knowledge --> strategize
+  strategize --> reason
+
+  %% Reasoning loop internals
+  reason --> self_check
+  self_check -->|"Yes — error found"| backtrack
+  backtrack -->|"Retry with correction"| reason
+  self_check -->|"No errors"| confident
+  confident -->|"Not yet — need<br/>more reasoning"| deepen
+  deepen -->|"Try alternative<br/>approach or go deeper"| reason
+  confident -->|"Yes — ready<br/>to commit"| formulate
+
+  %% Output routing
+  formulate --> output_decision
+  output_decision -->|"🔧 Tool Call"| execute_tool
+  execute_tool --> observe
+  observe --> inject
+  inject -->|"Re-enter thinking with<br/>new information"| understand
+  output_decision -->|"💬 Final Text"| final_answer
+
+  %% Output phase
+  final_answer --> safety_filter
+  safety_filter --> format_response
+  format_response --> response
+
+  %% Styles — light pastel backgrounds
+  style prompt fill:#5b9bd5,stroke:#2c5f8a,color:#fff
+  style response fill:#5b9bd5,stroke:#2c5f8a,color:#fff
+  style context fill:#d6e4f0,stroke:#4a86c8,color:#1a1a2e
+  style agentic_loop fill:#e8e8e8,stroke:#888,color:#1a1a2e
+  style thinking fill:#fff3cd,stroke:#f0c040,color:#1a1a2e
+  style reasoning_loop fill:#fce4cc,stroke:#e67e22,color:#1a1a2e
+  style tool_execution fill:#d4edda,stroke:#27ae60,color:#1a1a2e
+  style output_phase fill:#e2d1f0,stroke:#9b59b6,color:#1a1a2e
+  style output_decision fill:#fff,stroke:#888,color:#1a1a2e
+  style self_check fill:#fff,stroke:#e67e22,color:#1a1a2e
+  style confident fill:#fff,stroke:#e67e22,color:#1a1a2e
+  style backtrack fill:#f8d7da,stroke:#e74c3c,color:#1a1a2e
+  style deepen fill:#cce5ff,stroke:#3498db,color:#1a1a2e
+  style final_answer fill:#d4edda,stroke:#27ae60,color:#1a1a2e
